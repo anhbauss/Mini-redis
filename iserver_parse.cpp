@@ -1,0 +1,95 @@
+#include "iserver_commands.h"
+#include "../../include/interfaces.h"
+#include <algorithm>
+#include <cctype>
+#include <stdexcept>
+#include <sstream>
+#include <vector>
+#include <string>
+#include <stdlib.h>
+#include <variant>
+#include "RESP_ALGORITHM.h"
+//parse code ra
+std::vector<std::string> parseRESPArray(const std::string& resp){
+  std::vector<std::string> result = unpack_array(resp);  
+return result;
+}
+std::string toUpperCase(const std::string& str){
+    std::string result = str;
+    transform(result.begin(),result.end(),result.begin(),::toupper);
+    return result;
+}
+struct CommandCheck {
+    bool valid;
+    std::string command;
+    std::string error_message;
+};
+//kiểm tra cú pháp
+CommandCheck validate_Command(const std::vector<std::string>& args){
+    CommandCheck result;
+    if(args.empty()){
+        result.valid= false;
+        result.error_message = "empty command";
+        return result;
+    }
+    result.command = toUpperCase(args[0]);
+    std::vector<std::string> valid_commands = {"SET", "GET", "DEL", "EXISTS"};
+    bool is_valid_command = false;
+    //Check xem đúng với command nào không
+    for (const std::string& cmd : valid_commands ){
+        if (result.command == cmd){
+            is_valid_command = true;
+            break;
+        }
+    }
+    if (is_valid_command==false){
+        result.valid = false;
+        result.error_message = "Deo bt command '" + args[0] + "'" + "la clg";
+        return result; 
+    }
+    //Kiểm tra số lượng args
+    int num_args = 0;
+    if (result.command == "SET") {
+        num_args = 3;
+    } else if (result.command == "GET" || 
+               result.command == "DEL" || 
+               result.command == "EXISTS") {
+        num_args = 2;
+    }
+    if (args.size() != num_args) {
+        result.valid = false;
+        result.error_message = "wrong number of arguments for '" + 
+                              result.command + "' command";
+        return result;
+    }
+    result.valid = true;
+    return result;
+}
+//Xử lý cú pháp
+std::string process_command(const std::vector<std::string>& args, std::unordered_map<std::string, std::string>& store)
+{
+CommandCheck validation = validate_Command(args);
+if (validation.valid=false){
+    return "ERROR:"+ validation.error_message;
+}
+std::string command = validation.command;
+if (command == "SET"){
+    return "OK:" + handleSET(args, store);
+}
+else if (command == "GET") {
+    std::string result = handleGET(args, store);
+    if (result.empty()==true){
+        return "NULL";
+    }    
+return "VALUE:" + result;
+} 
+else if (command == "DEL") {
+        int result =  handleDEL(args, store);
+        return "INT:" + std::to_string(result);
+    } 
+else if (command == "EXISTS") {
+         int result = handleEXISTS(args, store);
+         return "INT:" + std::to_string(result);
+    }
+    return "ERROR:unknown command";
+}
