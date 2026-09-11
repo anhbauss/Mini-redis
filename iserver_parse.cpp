@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <variant>
 #include "RESP_ALGORITHM.h"
+using namespace std;
 //parse code ra
 vector<string> parseRESPArray(const string& resp){
   vector<string> result = unpack_array(resp);  
